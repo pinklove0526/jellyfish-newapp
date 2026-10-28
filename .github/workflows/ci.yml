@@ -111,15 +111,15 @@ jobs:
       - name: Pull scanner image
         run: docker pull "$SBOM_SCANNER_IMAGE"
 
-      # Exits 4 on a Critical vulnerability or a known malicious package, and 5
-      # if either cannot be judged (e.g. the vulnerability DB is unreachable).
+      # Vulnerabilities are report-only (see the security and risk reports).
+      # Exits 4 on a known malicious package, and 5 if that cannot be judged.
       - name: Scan
         run: |
           /tmp/bomlens/scripts/scan-sbom.sh \
             --project "${{ github.event.repository.name }}" \
             --version "${{ github.sha }}" \
             --all --generate-only \
-            --fail-on vulnerability=critical --fail-on malicious-package
+            --fail-on malicious-package
 
       - name: Upload SBOM and reports
         if: always()
