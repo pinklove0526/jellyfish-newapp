@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title th:text="${appName} + ' Start'">Jellyfish Start</title>
+    <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
+    <link rel="stylesheet" href="https://www.w3schools.com/lib/w3-colors-win8.css">
+    <style>
+        :root {
+            --tile: 150px;
+            --gap: 8px;
+            --bg: #1d1d1d;
+        }
+
+        html, body {
+            margin: 0;
+            min-height: 100%;
+            background: var(--bg);
+            color: #fff;
+            font-family: "Segoe UI", "Segoe UI Web", "Helvetica Neue", Arial, sans-serif;
+        }
+
+        .start-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 32px 48px 24px;
+        }
+
+        .start-header h1 {
+            margin: 0;
+            font-weight: 200;
+            font-size: 48px;
+            letter-spacing: 0.5px;
+        }
+
+        .user {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-weight: 300;
+            text-align: right;
+        }
+
+        .user .avatar {
+            width: 40px;
+            height: 40px;
+            display: grid;
+            place-items: center;
+            font-size: 18px;
+        }
+
+        .user small {
+            display: block;
+            opacity: 0.7;
+        }
+
+        .groups {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 48px;
+            padding: 0 48px 64px;
+        }
+
+        .group h2 {
+            margin: 0 0 12px;
+            font-size: 20px;
+            font-weight: 300;
+        }
+
+        .tiles {
+            display: grid;
+            grid-template-columns: repeat(4, var(--tile));
+            grid-auto-rows: var(--tile);
+            grid-auto-flow: dense;
+            gap: var(--gap);
+        }
+
+        .tile {
+            position: relative;
+            border: 0;
+            padding: 12px;
+            color: #fff;
+            text-align: left;
+            font: inherit;
+            cursor: pointer;
+            overflow: hidden;
+            outline-offset: 3px;
+            transition: transform 0.12s ease, box-shadow 0.12s ease;
+        }
+
+        .tile:hover {
+            box-shadow: inset 0 0 0 3px rgba(255, 255, 255, 0.35);
+        }
+
+        .tile:focus-visible {
+            outline: 3px solid #fff;
+        }
+
+        .tile.pressed {
+            transform: scale(0.95);
+        }
+
+        .tile.wide {
+            grid-column: span 2;
+        }
+
+        .tile.large {
+            grid-column: span 2;
+            grid-row: span 2;
+        }
+
+        .tile svg {
+            width: 48px;
+            height: 48px;
+            stroke: #fff;
+            fill: none;
+            stroke-width: 1.6;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        .tile .center {
+            position: absolute;
+            inset: 0;
+            display: grid;
+            place-items: center;
+        }
+
+        .tile .label {
+            position: absolute;
+            left: 12px;
+            bottom: 8px;
+            font-size: 14px;
+        }
+
+        .tile .badge {
+            position: absolute;
+            right: 12px;
+            bottom: 8px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .tile .big {
+            font-size: 56px;
+            font-weight: 200;
+            line-height: 1;
+        }
+
+        .tile .live {
+            transition: opacity 0.3s ease, transform 0.3s ease;
+        }
+
+        .tile .live.flip {
+            opacity: 0;
+            transform: translateY(16px);
+        }
+
+        .tile .sub {
+            font-size: 15px;
+            font-weight: 300;
+            opacity: 0.9;
+        }
+
+        .status-dot {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #fff;
+            margin-right: 6px;
+            vertical-align: middle;
+        }
+
+        .status-dot.warn {
+            animation: blink 1s steps(2, start) infinite;
+        }
+
+        @keyframes blink {
+            to { visibility: hidden; }
+        }
+
+        .charms {
+            position: fixed;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 48px;
+            background: rgba(0, 0, 0, 0.6);
+            font-size: 13px;
+            font-weight: 300;
+        }
+
+        .w3-modal-content {
+            max-width: 520px;
+            color: #fff;
+        }
+
+        .w3-modal-content h3 {
+            font-weight: 300;
+        }
+
+        .modal-close {
+            border: 0;
+            background: transparent;
+            color: #fff;
+            font-size: 24px;
+            cursor: pointer;
+        }
+
+        @media (max-width: 700px) {
+            :root {
+                --tile: calc((100vw - 32px - 3 * var(--gap)) / 4);
+            }
+
+            .start-header {
+                padding: 20px 16px 16px;
+            }
+
+            .start-header h1 {
+                font-size: 32px;
+            }
+
+            .user small {
+                display: none;
+            }
+
+            .groups {
+                padding: 0 16px 64px;
+                gap: 32px;
+            }
+
+            .tile.small-mobile {
+                grid-column: span 2;
+                grid-row: span 2;
+            }
+
+            .tile.large,
+            .tile.wide {
+                grid-column: span 4;
+                grid-row: span 2;
+            }
+
+            .tile .big {
+                font-size: 40px;
+            }
+
+            .charms {
+                padding: 8px 16px;
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .tile, .tile .live { transition: none; }
+            .status-dot.warn { animation: none; }
+        }
+    </style>
+</head>
+<body>
+
+<header class="start-header">
+    <h1>Start</h1>
+    <div class="user">
+        <div>
+            <span th:text="${appName}">Jellyfish</span>
+            <small>Dashboard</small>
+        </div>
+        <div class="avatar w3-win8-violet">J</div>
+    </div>
+</header>
+
+<main class="groups">
+    <section class="group">
+        <h2>Overview</h2>
+        <div class="tiles">
+            <button class="tile large w3-win8-cyan" data-tile="clock" data-title="Clock">
+                <div class="center">
+                    <div class="w3-center">
+                        <div class="big" id="clock-time">--:--</div>
+                        <div class="sub" id="clock-date">&nbsp;</div>
+                    </div>
+                </div>
+                <span class="label">Clock</span>
+            </button>
+
+            <button class="tile small-mobile w3-win8-magenta" data-tile="mail" data-title="Mail">
+                <div class="center">
+                    <svg viewBox="0 0 48 48" aria-hidden="true"><rect x="6" y="11" width="36" height="26"/><path d="M6 11l18 15 18-15"/></svg>
+                </div>
+                <span class="label">Mail</span>
+                <span class="badge" id="mail-count">0</span>
+            </button>
+
+            <button class="tile small-mobile w3-win8-lime" data-tile="calendar" data-title="Calendar">
+                <div class="center">
+                    <div class="w3-center">
+                        <div class="big" id="cal-day">--</div>
+                        <div class="sub" id="cal-weekday">&nbsp;</div>
+                    </div>
+                </div>
+                <span class="label">Calendar</span>
+            </button>
+
+            <button class="tile wide w3-win8-amber" data-tile="server" data-title="Server status">
+                <div style="position:absolute;left:12px;top:12px;right:12px">
+                    <div class="sub"><span class="status-dot" id="server-dot"></span><span id="server-state">Checking…</span></div>
+                    <div class="big live" id="server-latency" style="font-size:40px;margin-top:8px">-- ms</div>
+                </div>
+                <span class="label">Server</span>
+            </button>
+        </div>
+    </section>
+
+    <section class="group">
+        <h2>Apps</h2>
+        <div class="tiles">
+            <button class="tile wide w3-win8-cobalt" data-tile="photos" data-title="Photos">
+                <div style="position:absolute;left:12px;top:12px;right:12px">
+                    <svg viewBox="0 0 48 48" aria-hidden="true"><rect x="5" y="9" width="38" height="30"/><circle cx="17" cy="20" r="4"/><path d="M5 35l12-10 9 7 6-5 11 8"/></svg>
+                    <div class="sub live" id="photos-caption">Loading albums…</div>
+                </div>
+                <span class="label">Photos</span>
+            </button>
+
+            <button class="tile small-mobile w3-win8-emerald" data-tile="tasks" data-title="Tasks">
+                <div class="center">
+                    <svg viewBox="0 0 48 48" aria-hidden="true"><path d="M10 25l9 9 19-20"/></svg>
+                </div>
+                <span class="label">Tasks</span>
+                <span class="badge" id="task-count">5</span>
+            </button>
+
+            <button class="tile small-mobile w3-win8-orange" data-tile="weather" data-title="Weather">
+                <div class="center">
+                    <div class="w3-center">
+                        <div class="big live" id="weather-temp">--°</div>
+                        <div class="sub" id="weather-desc">&nbsp;</div>
+                    </div>
+                </div>
+                <span class="label">Weather</span>
+            </button>
+
+            <button class="tile wide w3-win8-violet" data-tile="music" data-title="Music">
+                <div style="position:absolute;left:12px;top:12px;right:12px">
+                    <svg viewBox="0 0 48 48" aria-hidden="true"><path d="M18 34V10l20-4v24"/><circle cx="13" cy="34" r="5"/><circle cx="33" cy="30" r="5"/></svg>
+                    <div class="sub live" id="music-track">Nothing playing</div>
+                </div>
+                <span class="label">Music</span>
+            </button>
+
+            <button class="tile small-mobile w3-win8-crimson" data-tile="store" data-title="Store">
+                <div class="center">
+                    <svg viewBox="0 0 48 48" aria-hidden="true"><path d="M9 16h30l-3 24H12z"/><path d="M17 16v-3a7 7 0 0114 0v3"/></svg>
+                </div>
+                <span class="label">Store</span>
+            </button>
+
+            <button class="tile small-mobile w3-win8-steel" data-tile="settings" data-title="Settings">
+                <div class="center">
+                    <svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="6"/><path d="M24 6v6M24 36v6M6 24h6M36 24h6M11.3 11.3l4.2 4.2M32.5 32.5l4.2 4.2M11.3 36.7l4.2-4.2M32.5 15.5l4.2-4.2"/></svg>
+                </div>
+                <span class="label">Settings</span>
+            </button>
+        </div>
+    </section>
+</main>
+
+<footer class="charms">
+    <span id="status-message">Ready</span>
+    <span id="status-time"></span>
+</footer>
+
+<div id="tile-modal" class="w3-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <div class="w3-modal-content w3-animate-right" id="modal-panel">
+        <div class="w3-container w3-padding-16">
+            <div class="w3-bar">
+                <h3 class="w3-bar-item w3-padding-0" id="modal-title">Tile</h3>
+                <button class="modal-close w3-right" id="modal-close" aria-label="Close">&times;</button>
+            </div>
+            <p id="modal-body"></p>
+            <div id="modal-actions"></div>
+        </div>
+    </div>
+</div>
+
+<script th:src="@{/js/main.js}" src="../static/js/main.js"></script>
+</body>
+</html>
