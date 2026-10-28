@@ -63,10 +63,10 @@ jobs:
       - name: Build image
         run: docker build -t jellyfish-newapp .
 
-      # Run with the limits of a Cloudflare "basic" instance (1 GiB, 1/4 vCPU).
+      # Run with the limits of a Cloudflare "standard-1" instance (4 GiB, 1/2 vCPU).
       - name: Start container and wait for the app
         run: |
-          docker run -d --name app -p 8080:8080 --memory 1g --cpus 0.25 jellyfish-newapp
+          docker run -d --name app -p 8080:8080 --memory 4g --cpus 0.5 jellyfish-newapp
           start=$(date +%s)
           until curl -fsS -o /dev/null http://localhost:8080/; do
             if [ $(( $(date +%s) - start )) -ge 120 ]; then
@@ -76,7 +76,7 @@ jobs:
             fi
             sleep 1
           done
-          echo "::notice title=Container startup::Answered on port 8080 after $(( $(date +%s) - start ))s at 1 GiB / 0.25 vCPU"
+          echo "::notice title=Container startup::Answered on port 8080 after $(( $(date +%s) - start ))s at 4 GiB / 0.5 vCPU"
 
       - name: Check page and static files
         run: |

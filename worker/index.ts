@@ -4,7 +4,7 @@ import { DurableObject } from "cloudflare:workers";
 const PORT = 8080;
 // Put the container to sleep after this long without requests.
 const INACTIVITY_TIMEOUT_MS = 10 * 60 * 1000;
-// A cold Spring Boot start on a "basic" instance (1/4 vCPU) can take a while.
+// A cold Spring Boot start on a "standard-1" instance (1/2 vCPU) can take a while.
 const STARTUP_TIMEOUT_MS = 120 * 1000;
 
 export class JellyfishApp extends DurableObject<Env> {
@@ -43,8 +43,9 @@ export class JellyfishApp extends DurableObject<Env> {
 		if (!container.running) {
 			container.start({
 				image: container.images.base,
-				// 1 GiB memory; "lite" (256 MiB) is too small for Spring Boot.
-				instance: "basic",
+				// 4 GiB, 1/2 vCPU. The only smaller type start() accepts is "lite"
+				// (256 MiB), which is too small for Spring Boot.
+				instance: "standard-1",
 				// The page serves its CSS and JS itself, so no outbound access is needed.
 				enableInternet: false,
 			});
