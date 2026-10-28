@@ -54,3 +54,58 @@ jobs:
         with:
           name: jellyfish-newapp
           path: target/*.jar
+
+  container-image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build image
+        run: docker build -t jellyfish-newapp .
+
+      # Run with the limits of a Cloudflare "basic" instance (1 GiB, 1/4 vCPU).
+      - name: Start container and wait for the app
+        run: |
+          docker run -d --name app -p 8080:8080 --memory 1g --cpus 0.25 jellyfish-newapp
+          start=$(date +%s)
+          until curl -fsS -o /dev/null http://localhost:8080/; do
+            if [ $(( $(date +%s) - start )) -ge 120 ]; then
+              docker logs app
+              echo "::error::App did not answer on port 8080 within 120s"
+              exit 1
+            fi
+            sleep 1
+          done
+          echo "::notice title=Container startup::Answered on port 8080 after $(( $(date +%s) - start ))s at 1 GiB / 0.25 vCPU"
+
+      - name: Check page and static files
+        run: |
+          curl -fsS http://localhost:8080/ | grep -q '<h1>Start</h1>'
+          curl -fsS -o /dev/null http://localhost:8080/css/w3.css
+          curl -fsS -o /dev/null http://localhost:8080/css/w3-colors-win8.css
+          curl -fsS -o /dev/null http://localhost:8080/js/main.js
+          ver=$(docker exec app /usr/jdk/bin/java -version 2>&1 | sed -n 2p || true)
+          user=$(docker inspect -f '{{.Config.User}}' jellyfish-newapp)
+          size=$(docker image inspect -f '{{.Size}}' jellyfish-newapp | awk '{printf "%.0fMB", $1/1000000}')
+          echo "::notice title=Container image::$ver | user $user | $size"
+
+      - name: Container logs
+        if: always()
+        run: docker logs app || true
+
+  worker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install Wrangler
+        run: npm install --no-audit --no-fund
+
+      # Generates types, type-checks the Worker and validates wrangler.jsonc
+      # (including the container image build) without deploying.
+      - name: Check Worker
+        run: npm run check

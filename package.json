@@ -1,0 +1,16 @@
+{
+	"name": "jellyfish-newapp-worker",
+	"description": "Cloudflare Worker that runs the Spring Boot app in a Cloudflare Container",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"cf-typegen": "wrangler types",
+		"check": "wrangler types && tsc --noEmit && wrangler deploy --dry-run",
+		"deploy": "wrangler deploy",
+		"dev": "wrangler dev"
+	},
+	"devDependencies": {
+		"typescript": "5.9.3",
+		"wrangler": "4.150.0"
+	}
+}

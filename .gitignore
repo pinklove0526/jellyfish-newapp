@@ -3,3 +3,8 @@ target/
 *.iml
 .vscode/
 .DS_Store
+
+# Cloudflare Worker
+node_modules/
+.wrangler/
+worker-configuration.d.ts
