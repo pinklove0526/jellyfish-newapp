@@ -12,15 +12,39 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    # Build inside Microsoft's Build of OpenJDK 17. The image ships the JDK
+    # but not Maven, so Maven is installed below.
+    container: mcr.microsoft.com/openjdk/jdk:17-ubuntu
+    env:
+      MAVEN_VERSION: 3.9.16
+      MAVEN_SHA512: 831a8591fe20c8243b1dbe7d71e3244f31d1665b0804b2e825e38cbbe5ce0cafb8338851f90780735568773e0a6cd07bbec107cda0b896b008b861075358b6f6
+    defaults:
+      run:
+        shell: bash
     steps:
+      - name: Install build tools
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends ca-certificates curl git
+          curl -fsSLo /tmp/maven.tar.gz "https://archive.apache.org/dist/maven/maven-3/${MAVEN_VERSION}/binaries/apache-maven-${MAVEN_VERSION}-bin.tar.gz"
+          echo "${MAVEN_SHA512}  /tmp/maven.tar.gz" | sha512sum -c -
+          tar -xzf /tmp/maven.tar.gz -C /opt
+          echo "/opt/apache-maven-${MAVEN_VERSION}/bin" >> "$GITHUB_PATH"
+
       - uses: actions/checkout@v4
 
-      - name: Set up JDK 17
-        uses: actions/setup-java@v4
+      - name: Cache Maven repository
+        uses: actions/cache@v4
         with:
-          distribution: temurin
-          java-version: '17'
-          cache: maven
+          path: ~/.m2/repository
+          key: maven-msopenjdk17-${{ hashFiles('**/pom.xml') }}
+          restore-keys: maven-msopenjdk17-
+
+      - name: Show toolchain
+        run: |
+          grep PRETTY_NAME /etc/os-release
+          java -version
+          mvn -v
 
       - name: Build with Maven
         run: mvn -B verify
