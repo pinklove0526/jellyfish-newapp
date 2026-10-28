@@ -93,6 +93,47 @@ jobs:
         if: always()
         run: docker logs app || true
 
+  # SBOM, open-source notice and security/license risk report with SK Telecom's
+  # BomLens (https://github.com/sktelecom/bomlens). The script and the scanner
+  # image are pinned to the same release.
+  sbom:
+    runs-on: ubuntu-latest
+    env:
+      BOMLENS_VERSION: 1.14.3
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install BomLens
+        run: |
+          git clone --depth 1 --branch "v${BOMLENS_VERSION}" https://github.com/sktelecom/bomlens.git /tmp/bomlens
+          echo "SBOM_SCANNER_IMAGE=ghcr.io/sktelecom/bomlens:${BOMLENS_VERSION}" >> "$GITHUB_ENV"
+
+      - name: Pull scanner image
+        run: docker pull "$SBOM_SCANNER_IMAGE"
+
+      # Exits 4 on a Critical vulnerability or a known malicious package, and 5
+      # if either cannot be judged (e.g. the vulnerability DB is unreachable).
+      - name: Scan
+        run: |
+          /tmp/bomlens/scripts/scan-sbom.sh \
+            --project "${{ github.event.repository.name }}" \
+            --version "${{ github.sha }}" \
+            --all --generate-only \
+            --fail-on vulnerability=critical --fail-on malicious-package
+
+      - name: Upload SBOM and reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom
+          path: |
+            */*_bom.json
+            */*_bom.spdx.json
+            */*_NOTICE.*
+            */*_security.*
+            */*_risk-report.*
+          if-no-files-found: warn
+
   worker:
     runs-on: ubuntu-latest
     steps:
