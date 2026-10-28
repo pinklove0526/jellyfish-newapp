@@ -1,0 +1,65 @@
+name: JDK 17 Docker images
+
+# Reports which OpenJDK 17 Docker images the runner already has and which
+# common ones it can pull, with the Java version each actually ships.
+on:
+  workflow_dispatch:
+  push:
+    branches: [develop]
+    paths:
+      - .github/workflows/jdk17-images.yml
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Runner environment
+        run: |
+          {
+            echo "Runner: $ImageOS $ImageVersion"
+            docker version --format 'Docker: {{.Server.Version}}'
+            echo "JAVA_HOME_17_X64=${JAVA_HOME_17_X64:-<unset>}"
+            echo "Preinstalled images:"
+            docker images --format '  {{.Repository}}:{{.Tag}} ({{.Size}})' | sort
+            [ -n "$(docker images -q)" ] || echo "  (none)"
+          } | tee runner.txt
+          msg=$(sed ':a;N;$!ba;s/%/%25/g;s/\n/%0A/g' runner.txt)
+          echo "::notice title=Runner environment::$msg"
+
+      - name: Probe OpenJDK 17 images
+        run: |
+          images=(
+            eclipse-temurin:17-jdk
+            eclipse-temurin:17-jre
+            eclipse-temurin:17-jdk-alpine
+            amazoncorretto:17
+            amazoncorretto:17-alpine
+            openjdk:17
+            openjdk:17-jdk-slim
+            azul/zulu-openjdk:17
+            bellsoft/liberica-openjdk-debian:17
+            sapmachine:17
+            ibm-semeru-runtimes:open-17-jdk
+            mcr.microsoft.com/openjdk/jdk:17-ubuntu
+            registry.access.redhat.com/ubi9/openjdk-17
+            maven:3.9-eclipse-temurin-17
+            gradle:jdk17
+          )
+          : > results.txt
+          for img in "${images[@]}"; do
+            if ! docker pull -q "$img" > /dev/null 2> err.txt; then
+              echo "FAIL  $img  pull failed: $(head -c 150 err.txt | tr '\n' ' ')" >> results.txt
+              continue
+            fi
+            ver=$(docker run --rm --entrypoint java "$img" -version 2>&1 | head -2 | tr '\n' ' ' | tr -s ' ' || true)
+            size=$(docker image inspect -f '{{.Size}}' "$img" | awk '{printf "%.0fMB", $1/1000000}')
+            created=$(docker image inspect -f '{{.Created}}' "$img" | cut -c1-10)
+            echo "OK    $img  [$size, built $created]  $ver" >> results.txt
+            docker rmi -f "$img" > /dev/null
+          done
+          cat results.txt
+          msg=$(sed ':a;N;$!ba;s/%/%25/g;s/\n/%0A/g' results.txt)
+          echo "::notice title=OpenJDK 17 images::$msg"
