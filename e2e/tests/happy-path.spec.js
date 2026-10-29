@@ -29,7 +29,7 @@ test.describe('all tiles render', () => {
 
 	test('the status bar reports the unavailable tile', async ({ page }) => {
 		await openShell(page);
-		await expect(page.locator('#status-message')).toHaveText('Ready · 1 tile unavailable');
+		await expect(page.locator('#status-message')).toHaveText('Ready · 2 tiles unavailable');
 	});
 });
 
