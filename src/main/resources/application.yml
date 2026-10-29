@@ -86,3 +86,27 @@ mfe:
       group: Apps
       size: small
       color: steel
+    - id: graph
+      title: Runtime graph
+      version: 1.0.0
+      module-url: /tiles/graph/v1/index.js
+      enabled: true
+      group: Diagnostics
+      size: large
+      color: teal
+    - id: deployed
+      title: Deployed apps
+      version: 1.0.0
+      module-url: /tiles/deployed/v1/index.js
+      enabled: true
+      group: Diagnostics
+      size: wide
+      color: indigo
+    - id: broken
+      title: Broken demo
+      version: 1.0.0
+      module-url: /tiles/broken/v1/index.js
+      enabled: true
+      group: Diagnostics
+      size: small
+      color: red

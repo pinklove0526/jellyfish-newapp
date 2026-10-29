@@ -8,9 +8,8 @@ A Windows 8 "Metro"-style Start screen served by Spring Boot, and a small
 micro-frontend architecture with no framework and no bundler, just Spring MVC,
 vanilla JavaScript and [w3.css](https://www.w3schools.com/w3css/).
 
-> **Status:** the shell, manifest, independently loaded and versioned tile
-> modules, and the cross-tile bus are built. The remaining micro-frontend features below are marked *planned* until
-> they are built.
+> **Status:** every micro-frontend feature in the table below is built. Tests
+> for the manifest and home controller are still planned.
 
 ## Micro-frontend concept mapping
 
@@ -21,9 +20,9 @@ vanilla JavaScript and [w3.css](https://www.w3schools.com/w3css/).
 | **Independently loaded remotes** | Each tile is an ES module under `static/tiles/<id>/v1/`, loaded with dynamic `import()` and exposing `mount(el, ctx)` / `unmount()` (and an optional `detail()`) | built |
 | **Versioned paths** | Tiles are served from `/tiles/<id>/v1/...`; each tile shows its version, and the detail panel shows its module path | built |
 | **Cross-tile messaging** | A tiny `CustomEvent` bus (`static/js/bus.js`, handed to tiles as `ctx.bus`); the Tasks tile publishes `tasks:changed` and the Calendar tile shows it | built |
-| **Fault isolation** | `try/catch` plus a timeout per tile, an "unavailable" state, and a deliberately broken demo tile to show the shell survives | planned |
-| **Runtime graph** | A tile drawing shell → manifest → tiles with live/failed status | planned |
-| **Deployed apps** | A tile built from the manifest plus build info (git SHA, build time) | planned |
+| **Fault isolation** | Each tile loads, renders its detail panel and runs its actions inside its own `try/catch`, and loading times out after 5 s. A tile that throws, hangs or 404s becomes an "unavailable" frame (the Broken demo tile always does) and the rest keep running | built |
+| **Runtime graph** | The Runtime graph tile draws shell → manifest → tiles with live/failed status, from the `shell:runtime` snapshot the shell publishes on the bus | built |
+| **Deployed apps** | The Deployed apps tile lists each tile's version, status and module path, plus the app version, git SHA and build time that `/api/manifest` reports | built |
 
 ## Writing a tile
 
@@ -37,6 +36,7 @@ export function detail() {}         // optional: { body, actions: [{ label, onCl
 ```
 
 `ctx` is `{ id, title, version, setStatus(message), flip(el, text), bus }`.
+`detail()` may also return a DOM `node` to show in the panel.
 `ctx.bus.emit(type, detail)` and `ctx.bus.on(type, handler, { replay })` carry
 cross-tile messages; name events `<tile-id>:<what-happened>`. `replay: true`
 delivers the last event to a tile that starts after the publisher.
@@ -61,6 +61,11 @@ Then open <http://localhost:8080>. Run the build and tests with `mvn verify`.
   outbound internet) and proxies every request to it. Deployment is manual
   today (`npm run deploy`, with Cloudflare credentials); automatic deployment is
   not set up.
+- **Build info:** `/api/manifest` includes the app version, build time and the
+  git SHA the build was made from. Pass the SHA with `-Dgit.sha=<sha>` (CI does)
+  or `--build-arg GIT_SHA=<sha>` for `docker build`; otherwise it shows
+  `unknown`. A manual `wrangler deploy` builds from the `Dockerfile` without a
+  SHA, so the deployed page shows `unknown` unless one is supplied.
 - **CI** (`.github/workflows/ci.yml`) has four jobs:
   - `build`: `mvn verify` inside the OpenJDK 17 image.
   - `container-image`: builds the image and smoke-tests it at `standard-1`

@@ -31,7 +31,12 @@ export function createBus() {
             const listener = (event) => handler(event.detail);
             target.addEventListener(type, listener);
             if (options && options.replay && last.has(type)) {
-                handler(last.get(type));
+                // Same isolation as a live event: a throwing subscriber is reported, not rethrown.
+                try {
+                    handler(last.get(type));
+                } catch (error) {
+                    console.error('Bus handler for "' + type + '" failed:', error);
+                }
             }
             return () => target.removeEventListener(type, listener);
         }
