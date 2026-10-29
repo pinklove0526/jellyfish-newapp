@@ -8,8 +8,9 @@ A Windows 8 "Metro"-style Start screen served by Spring Boot, and a small
 micro-frontend architecture with no framework and no bundler, just Spring MVC,
 vanilla JavaScript and [w3.css](https://www.w3schools.com/w3css/).
 
-> **Status:** every micro-frontend feature in the table below is built. Tests
-> for the manifest and home controller are still planned.
+> **Status:** every micro-frontend feature in the table below is built, and the
+> manifest endpoint, its validation and the home page have MockMvc and unit
+> tests (`mvn verify`). The tile modules themselves have no automated tests.
 
 ## Micro-frontend concept mapping
 
