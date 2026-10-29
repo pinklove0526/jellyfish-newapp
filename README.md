@@ -59,17 +59,17 @@ Then open <http://localhost:8080>. Run the build and tests with `mvn verify`.
 - **Container:** the `Dockerfile` builds the jar with Microsoft Build of
   OpenJDK 17 and Maven, and runs it on the OpenJDK 17 distroless image as a
   non-root user, listening on port 8080.
-- **Cloudflare:** `worker/index.ts` and `wrangler.jsonc` define a Worker that
-  starts the container on Cloudflare Containers (`standard-1` instance, no
-  outbound internet) and proxies every request to it. Deployment is manual
-  today (`npm run deploy`, with Cloudflare credentials); automatic deployment is
-  not set up.
+- **Cloudflare (staging):** `worker/index.ts` and `wrangler.jsonc` define a Worker
+  that starts the container on Cloudflare Containers (`standard-1` instance, no
+  outbound internet) and proxies every request to it. CI deploys it to the
+  **staging** environment on every push to the `staging` branch; see
+  [Staging deployment](#staging-deployment). Nothing deploys from `develop`.
 - **Build info:** `/api/manifest` includes the app version, build time and the
-  git SHA the build was made from. Pass the SHA with `-Dgit.sha=<sha>` (CI does)
-  or `--build-arg GIT_SHA=<sha>` for `docker build`; otherwise it shows
-  `unknown`. A manual `wrangler deploy` builds from the `Dockerfile` without a
-  SHA, so the deployed page shows `unknown` unless one is supplied.
-- **CI** (`.github/workflows/ci.yml`) has five jobs:
+  git SHA the build was made from. Pass the SHA with `-Dgit.sha=<sha>` for Maven
+  or `--build-arg GIT_SHA=<sha>` for `docker build`; CI does both, and the staging
+  deploy passes it through Wrangler's `build_vars`. Without one it shows
+  `unknown`, which is what a manual `npm run deploy` gives.
+- **CI** (`.github/workflows/ci.yml`) has six jobs:
   - `build`: `mvn verify` inside the OpenJDK 17 image.
   - `container-image`: builds the image and smoke-tests it at `standard-1`
     limits.
@@ -77,10 +77,65 @@ Then open <http://localhost:8080>. Run the build and tests with `mvn verify`.
     notice, and security and license reports (uploaded as the `sbom`
     artifact). Vulnerabilities are report-only; a known malicious package
     fails the job.
-  - `worker`: type-checks the Worker and runs a dry-run deploy.
+  - `worker`: type-checks the Worker, runs a dry-run deploy and self-tests the
+    post-deploy smoke test script.
   - `e2e`: runs the Playwright tests in [`e2e/`](e2e/README.md) (Chromium only)
     against the jar built by `build`. On failure the HTML report, traces and
     screenshots are uploaded as the `e2e-report` artifact.
+  - `deploy`: runs only on a push to `staging`, after all five jobs above passed
+    on that same commit. See below.
+
+## Staging deployment
+
+Promotion flow: feature PR -> `develop`, then `develop` -> `staging`
+(fast-forward or a PR). A push to `staging` runs the whole pipeline, and only if
+every job passes does the `deploy` job run. It never runs on pull requests.
+
+What the `deploy` job does:
+
+1. Uses the GitHub Environment **`staging`** and a concurrency group, so deploys
+   never overlap and a running deploy is never cancelled (a newer push that is
+   still waiting replaces an older waiting one).
+2. Copies `wrangler.jsonc` with the commit SHA added as the image build variable
+   `GIT_SHA` (`wrangler.jsonc` must therefore stay plain JSON, without comments).
+3. Runs `wrangler deploy`. Wrangler builds the `Dockerfile` with Docker on the
+   runner and pushes the image to Cloudflare's registry as part of the deploy.
+4. Smoke-tests the deployment: fetches `/api/manifest`, requires HTTP 200 and
+   `build.gitSha` equal to the commit being deployed, retrying with backoff (up
+   to 10 minutes) for the container cold start. A deployment that is still on a
+   different SHA at the deadline fails the job.
+
+A deploy does not restart a container that is already running: it keeps the
+image it started from. The Worker therefore compares the running container's
+image with the one it was deployed with and replaces the container when they
+differ, which happens on the first request after a deploy.
+
+The Worker is named `jellyfish-newapp` in `wrangler.jsonc`, with no `-staging`
+suffix, so this deployment is the only deployment under that name and this
+repository treats it as staging.
+
+### One-time setup (you do this; no secret values belong in the repository)
+
+1. In **Settings -> Environments**, create an environment named `staging`. It is
+   recommended to restrict it to the `staging` branch there, and optionally to
+   require reviewers.
+2. Create these two **secrets** (on the `staging` environment, or on the
+   repository):
+   - `CLOUDFLARE_ACCOUNT_ID`: your Cloudflare account ID.
+   - `CLOUDFLARE_API_TOKEN`: an **Account API token** scoped to that one account
+     only. Start from the **Edit Cloudflare Workers** template (the one
+     Cloudflare's GitHub Actions guide uses) and **add** the account permissions
+     **Containers Edit** and **Cloudchamber Edit**.
+3. Optional: a **variable** (not a secret) `STAGING_URL` with the deployment's
+   `https://` URL. Without it the job uses the URL Wrangler prints.
+
+About the token: Cloudflare's CI guide names only the template above. Its
+Containers documentation does not say what a deploy needs, and the two additions
+are an inference from Wrangler itself, which requests the `containers:write` and
+`cloudchamber:write` scopes when you log in. If the first deploy fails with a
+permission error, the error says which permission is missing; once it works you
+can try removing ones you do not need. The first deploy can take several
+minutes while Cloudflare provisions the image.
 
 ## Inspiration
 

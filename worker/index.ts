@@ -40,9 +40,23 @@ export class JellyfishApp extends DurableObject<Env> {
 
 	private async startAndWaitForPort(): Promise<void> {
 		const container = this.ctx.container!;
+		const image = container.images.base;
+		// A deploy does not restart a running container: it keeps the image it
+		// started from. Replace one that is older than the image this Worker
+		// version was deployed with, so a new deploy actually takes effect.
+		// inspect() reports an empty image while a container is still starting.
+		if (container.running) {
+			const info = await container.inspect();
+			if (info && info.image !== "" && info.image !== image) {
+				console.log("Replacing container started from an older image");
+				await container.destroy();
+				// Stop tracking the old container's monitor so observeExit() watches the new one.
+				this.monitoring = undefined;
+			}
+		}
 		if (!container.running) {
 			container.start({
-				image: container.images.base,
+				image,
 				// 4 GiB, 1/2 vCPU. The only smaller type start() accepts is "lite"
 				// (256 MiB), which is too small for Spring Boot.
 				instance: "standard-1",
@@ -73,14 +87,16 @@ export class JellyfishApp extends DurableObject<Env> {
 
 	private observeExit(): void {
 		if (this.monitoring) return;
-		this.monitoring = this.ctx
+		const monitoring: Promise<void> = this.ctx
 			.container!.monitor()
 			.then(() => console.log("Container exited"))
 			.catch((error: unknown) => console.error("Container failed:", error))
 			.finally(() => {
-				this.monitoring = undefined;
+				// A replaced container's monitor can end after its successor's started.
+				if (this.monitoring === monitoring) this.monitoring = undefined;
 			});
-		this.ctx.waitUntil(this.monitoring);
+		this.monitoring = monitoring;
+		this.ctx.waitUntil(monitoring);
 	}
 }
 
