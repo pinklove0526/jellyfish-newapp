@@ -10,6 +10,7 @@ function render() {
 }
 
 export function mount(el) {
+    throw new Error('PROOF: deliberately broken clock tile');
     root = el;
     root.innerHTML = `
         <div class="center">
