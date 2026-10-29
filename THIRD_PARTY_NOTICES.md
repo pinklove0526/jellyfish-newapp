@@ -30,11 +30,11 @@ These files are copied into the repository and served to browsers.
   does not say whether *redistributing* the file in a public repository is
   allowed.
 
-Options if this matters to you: ask W3Schools for written permission or a
-license, load the file from W3Schools' own host instead of committing it (this
-conflicts with the container's no-outbound-internet setting and the
-"serve locally" choice made earlier), or replace it with a CSS library under a
-known license.
+**Decision:** both CSS files are bundled intentionally and are served by the app
+itself, with no CDN, so the Cloudflare deployment has no external runtime
+dependency. The licensing question above stays open; if it ever needs closing,
+the routes are written permission from W3Schools or replacing the file with a
+library under a known license.
 
 ### Windows 8 colours (`w3-colors-win8.css`)
 
@@ -49,8 +49,8 @@ known license.
 
 Resolved by `mvn dependency:list` at the current `pom.xml` (Spring Boot 3.2.0),
 40 artifacts. Licenses were read from each artifact's POM, parent POM, or bundled
-license file. Versions will change when Spring Boot is upgraded; regenerate this
-section then.
+license file. Versions are those of the current `pom.xml`; regenerate this section when the
+dependencies change.
 
 **Apache-2.0** (35): Spring Boot 3.2.0 (`spring-boot`, `-autoconfigure`,
 `-devtools` and the `-starter`, `-starter-json`, `-starter-logging`,
@@ -85,6 +85,13 @@ Notes:
   That artifact could not be downloaded when this file was written, so this list
   comes from Maven instead, and BomLens's own copyleft findings are not
   reproduced here.
+
+## Inspiration (not a dependency)
+
+The micro-frontend architecture is inspired by a demo that was published at
+`tg-labs-mfe.gioitv-dev.workers.dev`. That site is now private, so its license
+could not be verified. Only its architecture inspired this project; nothing from
+it (code, copy or content) was copied.
 
 ## Not covered
 
