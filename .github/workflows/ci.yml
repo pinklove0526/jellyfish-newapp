@@ -154,3 +154,83 @@ jobs:
       # (including the container image build) without deploying.
       - name: Check Worker
         run: npm run check
+
+  # Drives the jar built by the build job in a real browser (Playwright,
+  # Chromium only): every tile, the failure paths, the diagnostics tiles and the
+  # mobile layout. The tests live in e2e/, separate from the Worker's package.json.
+  e2e:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download the jar from the build job
+        uses: actions/download-artifact@v4
+        with:
+          name: jellyfish-newapp
+          path: app
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: e2e/package-lock.json
+
+      - name: Install test dependencies
+        working-directory: e2e
+        run: npm ci --no-audit --no-fund
+
+      - name: Cache Playwright browsers
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('e2e/package-lock.json') }}
+
+      # The browser download is cached; its system libraries are not.
+      - name: Install Chromium
+        working-directory: e2e
+        run: |
+          if [ "${{ steps.playwright-cache.outputs.cache-hit }}" = "true" ]; then
+            npx playwright install-deps chromium
+          else
+            npx playwright install --with-deps chromium
+          fi
+
+      - name: Start the app
+        run: |
+          java_bin="${JAVA_HOME_17_X64:-$JAVA_HOME}/bin/java"
+          "$java_bin" -version
+          nohup "$java_bin" -jar "$(ls app/*.jar | head -1)" --server.port=8080 > app.log 2>&1 &
+          echo $! > app.pid
+          start=$(date +%s)
+          until curl -fsS -o /dev/null http://localhost:8080/api/manifest; do
+            if [ $(( $(date +%s) - start )) -ge 60 ]; then
+              cat app.log
+              echo "::error::/api/manifest did not respond within 60s"
+              exit 1
+            fi
+            sleep 1
+          done
+
+      - name: Run Playwright tests
+        working-directory: e2e
+        env:
+          BASE_URL: http://localhost:8080
+          E2E_EXPECTED_SHA: ${{ github.sha }}
+        run: npx playwright test
+
+      - name: Stop the app
+        if: always()
+        run: kill "$(cat app.pid)" 2>/dev/null || true
+
+      - name: Upload report, traces and screenshots
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-report
+          path: |
+            e2e/playwright-report
+            e2e/test-results
+            app.log
+          if-no-files-found: warn
