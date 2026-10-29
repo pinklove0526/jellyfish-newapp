@@ -140,6 +140,14 @@
             font-size: 14px;
         }
 
+        .tile .version {
+            position: absolute;
+            right: 8px;
+            top: 6px;
+            font-size: 11px;
+            opacity: 0.7;
+        }
+
         .tile .badge {
             position: absolute;
             right: 12px;
@@ -208,6 +216,11 @@
 
         .w3-modal-content h3 {
             font-weight: 300;
+        }
+
+        .modal-meta {
+            font-size: 12px;
+            opacity: 0.7;
         }
 
         .modal-close {
@@ -296,6 +309,7 @@
                 <button class="modal-close w3-right" id="modal-close" aria-label="Close">&times;</button>
             </div>
             <p id="modal-body"></p>
+            <p id="modal-meta" class="modal-meta"></p>
             <div id="modal-actions"></div>
         </div>
     </div>

@@ -8,8 +8,8 @@ A Windows 8 "Metro"-style Start screen served by Spring Boot, and a small
 micro-frontend architecture with no framework and no bundler, just Spring MVC,
 vanilla JavaScript and [w3.css](https://www.w3schools.com/w3css/).
 
-> **Status:** the shell, manifest and independently loaded tile modules are
-> built. The remaining micro-frontend features below are marked *planned* until
+> **Status:** the shell, manifest, independently loaded and versioned tile
+> modules, and the cross-tile bus are built. The remaining micro-frontend features below are marked *planned* until
 > they are built.
 
 ## Micro-frontend concept mapping
@@ -18,12 +18,28 @@ vanilla JavaScript and [w3.css](https://www.w3schools.com/w3css/).
 |---|---|---|
 | **Shell** | `static/js/main.js`: fetches the manifest, renders a frame per enabled tile, loads each tile, and owns the detail panel and status bar | built |
 | **Manifest** | `GET /api/manifest` lists each tile's id, title, version, module URL and enabled flag (plus group, size and colour), read from `mfe.tiles` in `application.yml` and validated at startup | built |
-| **Independently loaded remotes** | Each tile is an ES module under `static/js/tiles/<id>/`, loaded with dynamic `import()` and exposing `mount(el, ctx)` / `unmount()` (and an optional `detail()`) | built |
-| **Versioned paths** | Tiles are served from `/tiles/<id>/v1/...` and show their version | planned |
-| **Cross-tile messaging** | A tiny `CustomEvent` bus, with one demo pair of tiles | planned |
+| **Independently loaded remotes** | Each tile is an ES module under `static/tiles/<id>/v1/`, loaded with dynamic `import()` and exposing `mount(el, ctx)` / `unmount()` (and an optional `detail()`) | built |
+| **Versioned paths** | Tiles are served from `/tiles/<id>/v1/...`; each tile shows its version, and the detail panel shows its module path | built |
+| **Cross-tile messaging** | A tiny `CustomEvent` bus (`static/js/bus.js`, handed to tiles as `ctx.bus`); the Tasks tile publishes `tasks:changed` and the Calendar tile shows it | built |
 | **Fault isolation** | `try/catch` plus a timeout per tile, an "unavailable" state, and a deliberately broken demo tile to show the shell survives | planned |
 | **Runtime graph** | A tile drawing shell → manifest → tiles with live/failed status | planned |
 | **Deployed apps** | A tile built from the manifest plus build info (git SHA, build time) | planned |
+
+## Writing a tile
+
+A tile is `static/tiles/<id>/v<major>/index.js` plus an entry in `mfe.tiles` in
+`application.yml`. The module exports:
+
+```js
+export function mount(el, ctx) {}   // render into el, start timers
+export function unmount() {}        // stop timers, unsubscribe from the bus
+export function detail() {}         // optional: { body, actions: [{ label, onClick }] }
+```
+
+`ctx` is `{ id, title, version, setStatus(message), flip(el, text), bus }`.
+`ctx.bus.emit(type, detail)` and `ctx.bus.on(type, handler, { replay })` carry
+cross-tile messages; name events `<tile-id>:<what-happened>`. `replay: true`
+delivers the last event to a tile that starts after the publisher.
 
 ## Run locally
 
