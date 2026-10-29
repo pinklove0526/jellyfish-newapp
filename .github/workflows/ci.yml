@@ -47,7 +47,7 @@ jobs:
           mvn -v
 
       - name: Build with Maven
-        run: mvn -B verify
+        run: mvn -B verify -Dgit.sha=${{ github.sha }}
 
       - name: Upload jar
         uses: actions/upload-artifact@v4
@@ -61,7 +61,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Build image
-        run: docker build -t jellyfish-newapp .
+        run: docker build --build-arg GIT_SHA=${{ github.sha }} -t jellyfish-newapp .
 
       # Run with the limits of a Cloudflare "standard-1" instance (4 GiB, 1/2 vCPU).
       - name: Start container and wait for the app
@@ -84,6 +84,10 @@ jobs:
           curl -fsS -o /dev/null http://localhost:8080/css/w3.css
           curl -fsS -o /dev/null http://localhost:8080/css/w3-colors-win8.css
           curl -fsS -o /dev/null http://localhost:8080/js/main.js
+          curl -fsS -o /dev/null http://localhost:8080/tiles/clock/v1/index.js
+          manifest=$(curl -fsS http://localhost:8080/api/manifest)
+          echo "$manifest" | grep -q '"id":"clock"'
+          echo "$manifest" | grep -q "\"gitSha\":\"${GITHUB_SHA}\""
           ver=$(docker exec app /usr/jdk/bin/java -version 2>&1 | sed -n 2p || true)
           user=$(docker inspect -f '{{.Config.User}}' jellyfish-newapp)
           size=$(docker image inspect -f '{{.Size}}' jellyfish-newapp | awk '{printf "%.0fMB", $1/1000000}')

@@ -20,7 +20,10 @@ WORKDIR /app
 COPY pom.xml .
 RUN mvn -B -q dependency:go-offline
 COPY src ./src
-RUN mvn -B -q package -DskipTests && cp target/*.jar app.jar
+# The commit this image is built from, shown by the Deployed apps tile. Declared
+# here so changing it only rebuilds the layers below.
+ARG GIT_SHA=unknown
+RUN mvn -B -q package -DskipTests -Dgit.sha="${GIT_SHA}" && cp target/*.jar app.jar
 
 # --- Runtime: minimal Microsoft Build of OpenJDK 17 ---
 FROM --platform=linux/amd64 mcr.microsoft.com/openjdk/jdk:17-distroless

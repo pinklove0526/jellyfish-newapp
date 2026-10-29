@@ -103,6 +103,30 @@
             opacity: 0.6;
         }
 
+        .tile.unavailable {
+            background-image: repeating-linear-gradient(135deg, rgba(0, 0, 0, 0.25) 0 8px, transparent 8px 16px);
+        }
+
+        .tile.unavailable .center {
+            padding: 0 8px;
+        }
+
+        .tile.unavailable .w3-center {
+            max-width: 100%;
+        }
+
+        /* The full reason is in the tile's tooltip and in the Runtime graph. */
+        .tile .reason {
+            font-size: 12px;
+            font-weight: 300;
+            opacity: 0.9;
+            overflow: hidden;
+            overflow-wrap: anywhere;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+        }
+
         .tile.pressed {
             transform: scale(0.95);
         }
@@ -218,6 +242,10 @@
             font-weight: 300;
         }
 
+        .w3-modal-content.wide-panel {
+            max-width: 640px;
+        }
+
         .modal-meta {
             font-size: 12px;
             opacity: 0.7;
@@ -309,6 +337,7 @@
                 <button class="modal-close w3-right" id="modal-close" aria-label="Close">&times;</button>
             </div>
             <p id="modal-body"></p>
+            <div id="modal-extra"></div>
             <p id="modal-meta" class="modal-meta"></p>
             <div id="modal-actions"></div>
         </div>
