@@ -155,8 +155,8 @@ jobs:
       - name: Check Worker
         run: npm run check
 
-      # The post-deploy smoke test gates the staging deploy, so test the gate.
-      - name: Self-test the staging smoke test
+      # The post-deploy smoke test gates the production deploy, so test the gate.
+      - name: Self-test the post-deploy smoke test
         run: .github/scripts/smoke-test.test.sh
 
   # Drives the jar built by the build job in a real browser (Playwright,
@@ -239,9 +239,10 @@ jobs:
             app.log
           if-no-files-found: warn
 
-  # Deploys the staging environment to Cloudflare (see the README). It runs only
-  # on a push to the staging branch, never on a pull request, and only after
-  # every other job above has passed on that same commit.
+  # Deploys production to Cloudflare (see the README). The branch and the GitHub
+  # Environment are both named "staging", but this is the production deployment.
+  # It runs only on a push to the staging branch, never on a pull request, and
+  # only after every other job above has passed on that same commit.
   deploy:
     if: github.event_name == 'push' && github.ref == 'refs/heads/staging'
     needs: [build, container-image, sbom, worker, e2e]
@@ -299,8 +300,9 @@ jobs:
           WRANGLER_OUTPUT_FILE_PATH: ${{ runner.temp }}/wrangler-output.ndjson
         run: npx wrangler deploy --config wrangler.staging.jsonc
 
-      # STAGING_URL (a repository or environment variable, not a secret) wins if
-      # set, for example for a custom domain; otherwise use the URL Wrangler printed.
+      # STAGING_URL (a repository or environment variable, not a secret; the name
+      # follows the branch) wins if set, for example for a custom domain;
+      # otherwise use the URL Wrangler printed.
       - name: Find the deployed URL
         id: target
         env:
@@ -330,7 +332,7 @@ jobs:
           URL: ${{ steps.target.outputs.url }}
         run: |
           {
-            echo "### Staging deployed"
+            echo "### Production deployed (branch staging)"
             echo "- URL: $URL"
             echo "- Commit: $GITHUB_SHA"
           } >> "$GITHUB_STEP_SUMMARY"
