@@ -3,9 +3,13 @@
 //   mount(el, ctx)  render into el and start any timers
 //   unmount()       stop timers and release anything mount() took
 //   detail()        optional; {body, actions: [{label, onClick}]} for the panel
-// ctx = { id, title, version, setStatus(message), flip(el, text) }
+// ctx = { id, title, version, setStatus(message), flip(el, text), bus }
+// ctx.bus is the cross-tile CustomEvent bus (see bus.js).
+
+import { createBus } from './bus.js';
 
 const $ = (id) => document.getElementById(id);
+const bus = createBus();
 
 const SIZE_CLASS = { small: 'small-mobile', wide: 'wide', large: 'large' };
 
@@ -32,6 +36,7 @@ function openModal(frame, info) {
     panel.className = 'w3-modal-content w3-animate-right ' + frame.dataset.color;
     $('modal-title').textContent = frame.dataset.title;
     $('modal-body').textContent = info.body || '';
+    $('modal-meta').textContent = 'Module ' + frame.dataset.moduleUrl + ' · v' + frame.dataset.version;
 
     const actions = $('modal-actions');
     actions.replaceChildren();
@@ -69,6 +74,7 @@ function createFrame(tile) {
     frame.dataset.title = tile.title;
     frame.dataset.color = 'w3-win8-' + tile.color;
     frame.dataset.version = tile.version;
+    frame.dataset.moduleUrl = tile.moduleUrl;
 
     frame.addEventListener('pointerdown', () => frame.classList.add('pressed'));
     ['pointerup', 'pointerleave', 'pointercancel'].forEach((evt) => {
@@ -80,7 +86,12 @@ function createFrame(tile) {
 async function loadTile(tile, frame) {
     try {
         const mod = await import(tile.moduleUrl);
-        mod.mount(frame, { id: tile.id, title: tile.title, version: tile.version, setStatus, flip });
+        mod.mount(frame, { id: tile.id, title: tile.title, version: tile.version, setStatus, flip, bus });
+        const badge = document.createElement('span');
+        badge.className = 'version';
+        badge.textContent = 'v' + tile.version;
+        badge.title = tile.moduleUrl;
+        frame.appendChild(badge);
         frame.addEventListener('click', () => {
             openModal(frame, typeof mod.detail === 'function' ? mod.detail() : {});
         });

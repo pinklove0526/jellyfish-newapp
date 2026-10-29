@@ -4,6 +4,8 @@ let remaining = 5;
 
 function render() {
     root.querySelector('[data-role="count"]').textContent = remaining;
+    // Published for any tile that cares, e.g. the calendar's "due today" line.
+    ctx.bus.emit('tasks:changed', { remaining });
 }
 
 export function mount(el, context) {

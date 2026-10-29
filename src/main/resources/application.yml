@@ -9,7 +9,7 @@ mfe:
     - id: clock
       title: Clock
       version: 1.0.0
-      module-url: /js/tiles/clock/index.js
+      module-url: /tiles/clock/v1/index.js
       enabled: true
       group: Overview
       size: large
@@ -17,7 +17,7 @@ mfe:
     - id: mail
       title: Mail
       version: 1.0.0
-      module-url: /js/tiles/mail/index.js
+      module-url: /tiles/mail/v1/index.js
       enabled: true
       group: Overview
       size: small
@@ -25,7 +25,7 @@ mfe:
     - id: calendar
       title: Calendar
       version: 1.0.0
-      module-url: /js/tiles/calendar/index.js
+      module-url: /tiles/calendar/v1/index.js
       enabled: true
       group: Overview
       size: small
@@ -33,7 +33,7 @@ mfe:
     - id: server
       title: Server status
       version: 1.0.0
-      module-url: /js/tiles/server/index.js
+      module-url: /tiles/server/v1/index.js
       enabled: true
       group: Overview
       size: wide
@@ -41,7 +41,7 @@ mfe:
     - id: photos
       title: Photos
       version: 1.0.0
-      module-url: /js/tiles/photos/index.js
+      module-url: /tiles/photos/v1/index.js
       enabled: true
       group: Apps
       size: wide
@@ -49,7 +49,7 @@ mfe:
     - id: tasks
       title: Tasks
       version: 1.0.0
-      module-url: /js/tiles/tasks/index.js
+      module-url: /tiles/tasks/v1/index.js
       enabled: true
       group: Apps
       size: small
@@ -57,7 +57,7 @@ mfe:
     - id: weather
       title: Weather
       version: 1.0.0
-      module-url: /js/tiles/weather/index.js
+      module-url: /tiles/weather/v1/index.js
       enabled: true
       group: Apps
       size: small
@@ -65,7 +65,7 @@ mfe:
     - id: music
       title: Music
       version: 1.0.0
-      module-url: /js/tiles/music/index.js
+      module-url: /tiles/music/v1/index.js
       enabled: true
       group: Apps
       size: wide
@@ -73,7 +73,7 @@ mfe:
     - id: store
       title: Store
       version: 1.0.0
-      module-url: /js/tiles/store/index.js
+      module-url: /tiles/store/v1/index.js
       enabled: true
       group: Apps
       size: small
@@ -81,7 +81,7 @@ mfe:
     - id: settings
       title: Settings
       version: 1.0.0
-      module-url: /js/tiles/settings/index.js
+      module-url: /tiles/settings/v1/index.js
       enabled: true
       group: Apps
       size: small
