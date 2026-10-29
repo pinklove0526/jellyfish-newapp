@@ -1,0 +1,88 @@
+spring:
+  application:
+    name: jellyfish-newapp
+
+# Manifest served at /api/manifest. The shell loads every enabled tile as an
+# ES module from module-url. Order here is display order within a group.
+mfe:
+  tiles:
+    - id: clock
+      title: Clock
+      version: 1.0.0
+      module-url: /js/tiles/clock/index.js
+      enabled: true
+      group: Overview
+      size: large
+      color: cyan
+    - id: mail
+      title: Mail
+      version: 1.0.0
+      module-url: /js/tiles/mail/index.js
+      enabled: true
+      group: Overview
+      size: small
+      color: magenta
+    - id: calendar
+      title: Calendar
+      version: 1.0.0
+      module-url: /js/tiles/calendar/index.js
+      enabled: true
+      group: Overview
+      size: small
+      color: lime
+    - id: server
+      title: Server status
+      version: 1.0.0
+      module-url: /js/tiles/server/index.js
+      enabled: true
+      group: Overview
+      size: wide
+      color: amber
+    - id: photos
+      title: Photos
+      version: 1.0.0
+      module-url: /js/tiles/photos/index.js
+      enabled: true
+      group: Apps
+      size: wide
+      color: cobalt
+    - id: tasks
+      title: Tasks
+      version: 1.0.0
+      module-url: /js/tiles/tasks/index.js
+      enabled: true
+      group: Apps
+      size: small
+      color: emerald
+    - id: weather
+      title: Weather
+      version: 1.0.0
+      module-url: /js/tiles/weather/index.js
+      enabled: true
+      group: Apps
+      size: small
+      color: orange
+    - id: music
+      title: Music
+      version: 1.0.0
+      module-url: /js/tiles/music/index.js
+      enabled: true
+      group: Apps
+      size: wide
+      color: violet
+    - id: store
+      title: Store
+      version: 1.0.0
+      module-url: /js/tiles/store/index.js
+      enabled: true
+      group: Apps
+      size: small
+      color: crimson
+    - id: settings
+      title: Settings
+      version: 1.0.0
+      module-url: /js/tiles/settings/index.js
+      enabled: true
+      group: Apps
+      size: small
+      color: steel

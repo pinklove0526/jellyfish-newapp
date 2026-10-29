@@ -8,17 +8,17 @@ A Windows 8 "Metro"-style Start screen served by Spring Boot, and a small
 micro-frontend architecture with no framework and no bundler, just Spring MVC,
 vanilla JavaScript and [w3.css](https://www.w3schools.com/w3css/).
 
-> **Status:** today the project is a single-page dashboard whose tiles are
-> hard-coded in one template and one script. The micro-frontend features below
-> are the plan, and are marked *planned* until they are built.
+> **Status:** the shell, manifest and independently loaded tile modules are
+> built. The remaining micro-frontend features below are marked *planned* until
+> they are built.
 
 ## Micro-frontend concept mapping
 
 | Concept | In this project | Status |
 |---|---|---|
-| **Shell** | The Start screen: fetches the manifest, renders tiles, loads each one | planned (today: one `main.js` drives every tile) |
-| **Manifest** | `GET /api/manifest` lists each tile's id, title, version, module URL and enabled flag, read from `application.properties` | planned |
-| **Independently loaded remotes** | Each tile is an ES module under `static/js/tiles/<id>/`, loaded with dynamic `import()` and exposing `mount(el)` / `unmount()` | planned |
+| **Shell** | `static/js/main.js`: fetches the manifest, renders a frame per enabled tile, loads each tile, and owns the detail panel and status bar | built |
+| **Manifest** | `GET /api/manifest` lists each tile's id, title, version, module URL and enabled flag (plus group, size and colour), read from `mfe.tiles` in `application.yml` and validated at startup | built |
+| **Independently loaded remotes** | Each tile is an ES module under `static/js/tiles/<id>/`, loaded with dynamic `import()` and exposing `mount(el, ctx)` / `unmount()` (and an optional `detail()`) | built |
 | **Versioned paths** | Tiles are served from `/tiles/<id>/v1/...` and show their version | planned |
 | **Cross-tile messaging** | A tiny `CustomEvent` bus, with one demo pair of tiles | planned |
 | **Fault isolation** | `try/catch` plus a timeout per tile, an "unavailable" state, and a deliberately broken demo tile to show the shell survives | planned |
