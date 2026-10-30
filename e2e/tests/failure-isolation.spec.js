@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { MANIFEST_GLOB } from './mode.js';
 import { tile, openShell, watch, modal, openPanel, closePanel, settled, expectTasksStillWork, fulfillModule, TOTAL } from './helpers.js';
 
 // Every failure here is injected from the test with page.route(); the app is
@@ -12,7 +13,7 @@ test.describe('a tile that fails to load becomes "unavailable" and the others ke
 		const seen = watch(page);
 		// Never answered: the browser waits for this request until the page closes.
 		await page.route('**/tiles/weather/v1/index.js', () => {});
-		await page.goto('/');
+		await page.goto('./');
 
 		// Everything else is live long before the timeout...
 		await expect(page.locator('.tile .version')).toHaveCount(TOTAL - 2);
@@ -36,7 +37,7 @@ test.describe('a tile that fails to load becomes "unavailable" and the others ke
 	test('404 module', async ({ page }) => {
 		const seen = watch(page);
 		await page.route('**/tiles/store/v1/index.js', (route) => route.fulfill({ status: 404, body: 'not found' }));
-		await page.goto('/');
+		await page.goto('./');
 		await settled(page);
 		await expect(unavailable(page, 'store')).toBeVisible();
 		await expect(unavailable(page, 'store')).toContainText('Failed to fetch dynamically imported module');
@@ -54,7 +55,7 @@ test.describe('a tile that fails to load becomes "unavailable" and the others ke
 
 	test('module without mount()', async ({ page }) => {
 		await page.route('**/tiles/settings/v1/index.js', fulfillModule('export const nothing = 1;'));
-		await page.goto('/');
+		await page.goto('./');
 		await settled(page);
 		await expect(unavailable(page, 'settings')).toContainText('module has no mount()');
 		await expectTasksStillWork(page);
@@ -62,7 +63,7 @@ test.describe('a tile that fails to load becomes "unavailable" and the others ke
 
 	test('module with a syntax error', async ({ page }) => {
 		await page.route('**/tiles/photos/v1/index.js', fulfillModule('export function mount( {'));
-		await page.goto('/');
+		await page.goto('./');
 		await settled(page);
 		await expect(unavailable(page, 'photos')).toBeVisible();
 		await expectTasksStillWork(page);
@@ -78,7 +79,7 @@ test.describe('a tile that fails to load becomes "unavailable" and the others ke
 			}
 			export function unmount() { clearInterval(timer); globalThis.__clockUnmounted = true; }
 		`));
-		await page.goto('/');
+		await page.goto('./');
 		await settled(page);
 		await expect(unavailable(page, 'clock')).toContainText('injected mount failure');
 		expect(await page.evaluate(() => globalThis.__clockUnmounted)).toBe(true);
@@ -98,7 +99,7 @@ test.describe('a tile that fails after loading is contained', () => {
 	test('detail() that throws: the panel explains and the page keeps working', async ({ page }) => {
 		const seen = watch(page);
 		await page.route('**/tiles/store/v1/index.js', brokenStore(`export function detail() { throw new Error('boom'); }`));
-		await page.goto('/');
+		await page.goto('./');
 		await settled(page);
 		await openPanel(page, 'store');
 		await expect(modal(page).body).toHaveText('Details are unavailable: boom');
@@ -112,7 +113,7 @@ test.describe('a tile that fails after loading is contained', () => {
 		await page.route('**/tiles/store/v1/index.js', brokenStore(`
 			export function detail() { return { body: 'ok', actions: [{ label: 'Explode', onClick() { throw new Error('bang'); } }] }; }
 		`));
-		await page.goto('/');
+		await page.goto('./');
 		await settled(page);
 		await openPanel(page, 'store');
 		await modal(page).actions.filter({ hasText: 'Explode' }).click();
@@ -123,7 +124,7 @@ test.describe('a tile that fails after loading is contained', () => {
 	});
 });
 
-test.describe('a failed /api/manifest', () => {
+test.describe('a failed manifest request', () => {
 	const cases = {
 		'HTTP 500': (route) => route.fulfill({ status: 500, body: 'down' }),
 		'network error': (route) => route.abort('connectionrefused'),
@@ -132,8 +133,8 @@ test.describe('a failed /api/manifest', () => {
 	for (const [name, handler] of Object.entries(cases)) {
 		test(`${name}: the shell says so and does not crash`, async ({ page }) => {
 			const seen = watch(page);
-			await page.route('**/api/manifest', handler);
-			await page.goto('/');
+			await page.route(MANIFEST_GLOB, handler);
+			await page.goto('./');
 			await expect(page.locator('#groups')).toContainText('The tile manifest is unavailable.');
 			await expect(page.locator('#status-message')).toHaveText('Manifest unavailable');
 			await expect(page.locator('.tile')).toHaveCount(0);

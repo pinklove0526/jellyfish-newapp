@@ -343,3 +343,151 @@ jobs:
             echo "- URL: $URL"
             echo "- Commit: $GITHUB_SHA"
           } >> "$GITHUB_STEP_SUMMARY"
+
+  # GitHub Pages: a static snapshot of the app (see the README). It is built from
+  # the jar the build job made, so it carries that commit's SHA and build time.
+  # This job runs on pull requests too (build only, nothing is deployed), so a
+  # broken snapshot shows up before the merge. The site is uploaded as the Pages
+  # artifact; pages-e2e tests exactly those bytes and pages-deploy publishes them.
+  pages-build:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download the jar from the build job
+        uses: actions/download-artifact@v4
+        with:
+          name: jellyfish-newapp
+          path: app
+
+      # The sub-path of a project site is the repository name. A custom domain
+      # would serve the site at /, and this would need to change with it.
+      - name: Build the site
+        env:
+          EXPECTED_SHA: ${{ github.sha }}
+          PAGES_BASE_PATH: /${{ github.event.repository.name }}
+        run: |
+          export JAVA_BIN="${JAVA_HOME_17_X64:-$JAVA_HOME}/bin/java"
+          .github/scripts/build-pages.sh "$(ls app/*.jar | head -1)"
+
+      # include-hidden-files: the action leaves dotfiles out by default, and the
+      # site contains .nojekyll.
+      - name: Upload the Pages artifact
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: site
+          include-hidden-files: true
+
+  # The same specs as the e2e job (E2E_MODE=static), against the Pages artifact
+  # served by a plain static file server under the sub-path the real site uses.
+  pages-e2e:
+    needs: pages-build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download the Pages artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: github-pages
+          path: pages-artifact
+
+      - name: Unpack the site
+        run: |
+          mkdir site
+          tar -xf pages-artifact/artifact.tar -C site
+          ls -A site
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: e2e/package-lock.json
+
+      - name: Install test dependencies
+        working-directory: e2e
+        run: npm ci --no-audit --no-fund
+
+      - name: Cache Playwright browsers
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('e2e/package-lock.json') }}
+
+      - name: Install Chromium
+        working-directory: e2e
+        run: |
+          if [ "${{ steps.playwright-cache.outputs.cache-hit }}" = "true" ]; then
+            npx playwright install-deps chromium
+          else
+            npx playwright install --with-deps chromium
+          fi
+
+      - name: Run Playwright tests against the static site
+        working-directory: e2e
+        env:
+          E2E_MODE: static
+          STATIC_SUBPATH: /${{ github.event.repository.name }}
+          SITE_DIR: ../site
+          E2E_EXPECTED_SHA: ${{ github.sha }}
+        run: npx playwright test
+
+      - name: Upload report, traces and screenshots
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pages-e2e-report
+          path: |
+            e2e/playwright-report
+            e2e/test-results
+          if-no-files-found: warn
+
+  # Publishes the snapshot. Only on a push to the staging branch, after every
+  # other check has passed on that same commit. It does not depend on the
+  # Cloudflare deploy job or on DEPLOY_ENABLED. The "github-pages" Environment
+  # must allow the staging branch (see the README).
+  pages-deploy:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/staging'
+    needs: [build, container-image, sbom, worker, e2e, pages-build, pages-e2e]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    # One Pages deploy at a time. A deploy that has started is never cancelled.
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+    permissions:
+      contents: read # checkout, for the smoke test script
+      pages: write # create the Pages deployment
+      id-token: write # prove the deployment's origin to Pages
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5
+
+      # Retries with backoff while Pages propagates the new files; fails if the
+      # published manifest does not carry this commit's SHA.
+      - name: Smoke test the site
+        env:
+          BASE_URL: ${{ steps.deployment.outputs.page_url }}
+          EXPECTED_SHA: ${{ github.sha }}
+          SMOKE_MANIFEST_PATH: /manifest.json
+          SMOKE_DEADLINE_SECONDS: 600
+        run: .github/scripts/smoke-test.sh
+
+      - name: Summary
+        env:
+          URL: ${{ steps.deployment.outputs.page_url }}
+        run: |
+          {
+            echo "### GitHub Pages snapshot deployed (branch staging)"
+            echo "- URL: $URL"
+            echo "- Commit: $GITHUB_SHA"
+            echo "- A static snapshot: no Spring backend is running behind this site."
+          } >> "$GITHUB_STEP_SUMMARY"

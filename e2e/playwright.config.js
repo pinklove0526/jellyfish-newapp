@@ -1,8 +1,10 @@
 import { defineConfig, devices } from '@playwright/test';
 
-// The app is started outside Playwright (the CI job and the README show how),
-// so BASE_URL just says where it is listening.
-const baseURL = process.env.BASE_URL || 'http://localhost:8080';
+import { BASE_URL as baseURL, MODE, STATIC_PORT, STATIC_SUBPATH } from './tests/mode.js';
+
+// live: the app is started outside Playwright (the CI job and the README show
+// how), so BASE_URL just says where it is listening.
+// static: Playwright starts a plain file server for ../site under the sub-path.
 
 export default defineConfig({
 	testDir: './tests',
@@ -16,6 +18,14 @@ export default defineConfig({
 	reporter: process.env.CI
 		? [['list'], ['github'], ['html', { open: 'never' }]]
 		: [['list'], ['html', { open: 'never' }]],
+	webServer:
+		MODE === 'static'
+			? {
+					command: `node static-server.js ${process.env.SITE_DIR || '../site'} ${STATIC_SUBPATH} ${STATIC_PORT}`,
+					url: baseURL,
+					reuseExistingServer: false,
+				}
+			: undefined,
 	use: {
 		baseURL,
 		viewport: { width: 1280, height: 1000 },
