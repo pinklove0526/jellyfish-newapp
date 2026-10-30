@@ -343,20 +343,3 @@ jobs:
             echo "- URL: $URL"
             echo "- Commit: $GITHUB_SHA"
           } >> "$GITHUB_STEP_SUMMARY"
-
-  # TEMPORARY, removed in the next commit: isolates the vars.DEPLOY_ENABLED term
-  # of the deploy job's condition. With the variable unset, the first job must be
-  # skipped (not failed) and the control must run.
-  gate-proof-gated:
-    if: >-
-      github.event_name == 'pull_request' &&
-      vars.DEPLOY_ENABLED == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - run: echo "gated job ran, so DEPLOY_ENABLED is 'true' here" && exit 1
-
-  gate-proof-control:
-    if: github.event_name == 'pull_request'
-    runs-on: ubuntu-latest
-    steps:
-      - run: echo "control job ran"
