@@ -8,9 +8,11 @@ A Windows 8 "Metro"-style Start screen served by Spring Boot, and a small
 micro-frontend architecture with no framework and no bundler, just Spring MVC,
 vanilla JavaScript and [w3.css](https://www.w3schools.com/w3css/).
 
-> **Status:** every micro-frontend feature in the table below is built, and the
-> manifest endpoint, its validation and the home page have MockMvc and unit
-> tests (`mvn verify`). The tile modules themselves have no automated tests.
+> **Status:** every micro-frontend feature in the table below is built. The
+> manifest endpoint, its validation and the home page have MockMvc and unit tests
+> (`mvn verify`), and the browser side (every tile, the failure paths, the
+> diagnostics tiles, the mobile layout) has Playwright end-to-end tests in
+> [`e2e/`](e2e/README.md).
 
 ## Micro-frontend concept mapping
 
@@ -67,7 +69,7 @@ Then open <http://localhost:8080>. Run the build and tests with `mvn verify`.
   or `--build-arg GIT_SHA=<sha>` for `docker build`; otherwise it shows
   `unknown`. A manual `wrangler deploy` builds from the `Dockerfile` without a
   SHA, so the deployed page shows `unknown` unless one is supplied.
-- **CI** (`.github/workflows/ci.yml`) has four jobs:
+- **CI** (`.github/workflows/ci.yml`) has five jobs:
   - `build`: `mvn verify` inside the OpenJDK 17 image.
   - `container-image`: builds the image and smoke-tests it at `standard-1`
     limits.
@@ -76,6 +78,9 @@ Then open <http://localhost:8080>. Run the build and tests with `mvn verify`.
     artifact). Vulnerabilities are report-only; a known malicious package
     fails the job.
   - `worker`: type-checks the Worker and runs a dry-run deploy.
+  - `e2e`: runs the Playwright tests in [`e2e/`](e2e/README.md) (Chromium only)
+    against the jar built by `build`. On failure the HTML report, traces and
+    screenshots are uploaded as the `e2e-report` artifact.
 
 ## Inspiration
 

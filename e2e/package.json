@@ -1,0 +1,13 @@
+{
+	"name": "jellyfish-newapp-e2e",
+	"description": "Playwright end-to-end checks for the running Spring Boot app. Separate from the root package.json, which belongs to the Cloudflare Worker.",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"test": "playwright test",
+		"report": "playwright show-report"
+	},
+	"devDependencies": {
+		"@playwright/test": "1.63.0"
+	}
+}
