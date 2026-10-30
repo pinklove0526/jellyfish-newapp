@@ -62,7 +62,7 @@ feature branch -> PR to `develop` -> PR from `develop` to `staging`
 |---|---|
 | feature branches | One change each, branched off `develop` and merged only through a PR to `develop`. |
 | `develop` | Where changes are integrated and tested. CI runs on every push and pull request. **Nothing deploys from `develop`.** |
-| `staging` | The production branch: whatever is on `staging` is what is deployed, and it is the source of truth for the live deployment. It only receives changes through a PR from `develop`, and **a merge to `staging` deploys**. |
+| `staging` | The production branch: whatever is on `staging` is what is deployed, and it is the source of truth for the live deployment. It only receives changes through a PR from `develop`, and **a merge to `staging` deploys** (deployment is currently on hold, see [Production deployment](#production-deployment)). |
 
 > **Naming quirk:** the branch and the GitHub Environment are both called
 > `staging`, but this is not a pre-production stage and there is no separate
@@ -78,8 +78,9 @@ To release a change:
 2. Open a PR from `develop` to `staging`. CI runs again on that PR. Merge when it
    is green.
 3. The merge is a push to `staging`. The pipeline runs on the resulting commit
-   and, only if every check passes, the `deploy` job deploys that commit and
-   smoke-tests it (see [Production deployment](#production-deployment)). The
+   and, when deployment is enabled and every check passes, the `deploy` job
+   deploys that commit and smoke-tests it (see
+   [Production deployment](#production-deployment); it is on hold today). The
    deployed SHA is the SHA of the commit on `staging`.
 
 `staging` is meant to be protected so that it can only change through such a PR;
@@ -93,8 +94,9 @@ pushed to it directly.
   non-root user, listening on port 8080.
 - **Cloudflare (production):** `worker/index.ts` and `wrangler.jsonc` define a
   Worker that starts the container on Cloudflare Containers (`standard-1`
-  instance, no outbound internet) and proxies every request to it. CI deploys it
-  to production on every push to the `staging` branch; see
+  instance, no outbound internet) and proxies every request to it. When enabled,
+  CI deploys it to production on every push to the `staging` branch (deployment
+  is on hold today); see
   [Production deployment](#production-deployment) and [Branch flow](#branch-flow).
   Nothing deploys from `develop`.
 - **Build info:** `/api/manifest` includes the app version, build time and the
@@ -116,13 +118,22 @@ pushed to it directly.
     against the jar built by `build`. On failure the HTML report, traces and
     screenshots are uploaded as the `e2e-report` artifact.
   - `deploy`: runs only on a push to `staging`, after all five jobs above passed
-    on that same commit. See below.
+    on that same commit, and only when the repository variable `DEPLOY_ENABLED`
+    is `true`. It is on hold: unset, it is skipped. See below.
 
 ## Production deployment
 
-A push to `staging` (a merged PR from `develop`, see [Branch flow](#branch-flow))
-runs the whole pipeline, and only if every job passes does the `deploy` job run.
-It never runs on pull requests.
+> **Status: on hold.** Cloudflare Containers need the Workers Paid plan, and this
+> account does not have it, so nothing is deployed today. The deployment is
+> dormant, not removed: the `deploy` job is still in `ci.yml` and is skipped (not
+> failed) unless the repository variable `DEPLOY_ENABLED` is `true`. To enable it
+> later, set `DEPLOY_ENABLED` to `true` (Settings -> Secrets and variables ->
+> Actions -> Variables) and create the two secrets described under "One-time
+> setup" below. The rest of this section describes how it works once enabled.
+
+When enabled, a push to `staging` (a merged PR from `develop`, see
+[Branch flow](#branch-flow)) runs the whole pipeline, and only if every job
+passes does the `deploy` job run. It never runs on pull requests.
 
 What the `deploy` job does:
 
@@ -154,19 +165,20 @@ block, so there is a single deployment under that name.
    preferred, or on the repository):
    - `CLOUDFLARE_ACCOUNT_ID`: your Cloudflare account ID.
    - `CLOUDFLARE_API_TOKEN`: an **Account API token** scoped to that one account
-     only. Start from the **Edit Cloudflare Workers** template (the one
-     Cloudflare's GitHub Actions guide uses) and **add** the account permissions
-     **Containers Edit** and **Cloudchamber Edit**.
+     only. In the Cloudflare token UI a permission is a name plus a separate
+     level (Read or Edit). Start from the **Edit Cloudflare Workers** template
+     (the one Cloudflare's GitHub Actions guide uses) and **add** the permissions
+     **Containers** and **Cloudchamber**, each with the level **Edit**.
 3. Optional: a **variable** (not a secret) `STAGING_URL` with the deployment's
    `https://` URL. Without it the job uses the URL Wrangler prints.
 
-About the token: Cloudflare's CI guide names only the template above. Its
-Containers documentation does not say what a deploy needs, and the two additions
-are an inference from Wrangler itself, which requests the `containers:write` and
-`cloudchamber:write` scopes when you log in. If the first deploy fails with a
-permission error, the error says which permission is missing; once it works you
-can try removing ones you do not need. The first deploy can take several
-minutes while Cloudflare provisions the image.
+About the token: Cloudflare's CI guide names only the template above, and its
+Containers documentation does not spell out what a deploy needs. Containers and
+Cloudchamber both need **Edit**, which matches the `containers:write` and
+`cloudchamber:write` scopes Wrangler itself requests when you log in. The first
+deploy can take several minutes while Cloudflare provisions the image. If a
+deploy fails, note that the Actions log may show only that a Cloudflare API
+request failed; Wrangler's own log file, which has the detail, is not uploaded.
 
 ### Repository settings checklist (owner)
 
@@ -195,6 +207,18 @@ that.
   only the `staging` branch.
 - [ ] Optional: add required reviewers, so that each deploy waits for approval
   before it runs.
+
+## Roadmap
+
+Deployment is on hold (see [Production deployment](#production-deployment)).
+These are options that were considered for later. None of them is a commitment.
+
+- **A static build on Workers:** serve a static build of the front end from
+  Cloudflare Workers, which does not need a container.
+- **A free container host:** run the existing Docker image on a host with a free
+  tier.
+- **Publishing the image to GHCR:** have CI publish the container image to the
+  GitHub Container Registry, so it can be pulled and run anywhere.
 
 ## Inspiration
 
