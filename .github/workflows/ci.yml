@@ -243,8 +243,15 @@ jobs:
   # Environment are both named "staging", but this is the production deployment.
   # It runs only on a push to the staging branch, never on a pull request, and
   # only after every other job above has passed on that same commit.
+  #
+  # ON HOLD: Cloudflare Containers need the Workers Paid plan, so this job is
+  # dormant. It is skipped (not failed) unless the repository variable
+  # DEPLOY_ENABLED is 'true'. See the README to enable it.
   deploy:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/staging'
+    if: >-
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/staging' &&
+      vars.DEPLOY_ENABLED == 'true'
     needs: [build, container-image, sbom, worker, e2e]
     runs-on: ubuntu-latest
     timeout-minutes: 40
