@@ -80,13 +80,21 @@ Then open <http://localhost:8080>. Run the build and tests with `mvn verify`.
 ## Inspiration
 
 The architecture (shell, manifest, independently loaded remotes, fault
-isolation, runtime graph) is inspired by the micro-frontend demo at
-<https://tg-labs-mfe.gioitv-dev.workers.dev/>. This project is an independent
-implementation: no code, copy or content from that site is used.
+isolation, runtime graph) is inspired by a micro-frontend demo that was
+published at `tg-labs-mfe.gioitv-dev.workers.dev`. That site is now private, so
+its license could not be verified. This project takes inspiration from the
+architecture only. It is an independent implementation: no code, copy or
+content from that site was copied or used.
 
 ## License
 
 Licensed under the [Apache License, Version 2.0](LICENSE).
 
-Third-party components, including some whose licensing is unclear, are listed in
-[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+Copyright 2026 Jellyfish Ng; see [NOTICE](NOTICE).
+
+Third-party components are listed in
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). Note that `w3.css` and
+`w3-colors-win8.css` are bundled in this repository on purpose, so the page
+(and the Cloudflare deployment) has no external runtime dependency, even though
+their licensing is unclear: W3Schools says W3.CSS is free to use but publishes
+no license text.
