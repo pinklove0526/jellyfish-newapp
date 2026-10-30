@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { MANIFEST_ATTR, MANIFEST_REL, modulePathname, moduleUrl } from './mode.js';
 import { TILES, LIVE_TILES, TOTAL, tile, openShell, watch, modal, openPanel, closePanel } from './helpers.js';
 
 test.describe('all tiles render', () => {
@@ -24,7 +25,7 @@ test.describe('all tiles render', () => {
 		const modules = [];
 		page.on('request', (r) => { if (r.url().includes('/tiles/')) modules.push(new URL(r.url()).pathname); });
 		await openShell(page);
-		expect(modules.sort()).toEqual(TILES.map((t) => `/tiles/${t.id}/v1/index.js`).sort());
+		expect(modules.sort()).toEqual(TILES.map((t) => modulePathname(t.id)).sort());
 	});
 
 	test('the status bar reports the unavailable tile', async ({ page }) => {
@@ -55,7 +56,7 @@ test.describe('each tile opens its detail panel', () => {
 			await openPanel(page, id);
 			await expect(m.title).toHaveText(title);
 			await expect(m.body).not.toBeEmpty();
-			await expect(m.meta).toHaveText(`Module /tiles/${id}/v1/index.js · v1.0.0`);
+			await expect(m.meta).toHaveText(`Module ${moduleUrl(id)} · v1.0.0`);
 			await closePanel(page);
 		});
 	}
@@ -139,9 +140,9 @@ test.describe('event bus demo: Tasks -> Calendar', () => {
 	});
 
 	test('bus.js: replay, unsubscribe and argument checking', async ({ page }) => {
-		await page.goto('/');
+		await page.goto('./');
 		const result = await page.evaluate(async () => {
-			const { createBus } = await import('/js/bus.js');
+			const { createBus } = await import(new URL('js/bus.js', document.baseURI).href);
 			const bus = createBus();
 			const got = [];
 			bus.emit('a:x', 1);
@@ -172,14 +173,14 @@ test.describe('diagnostics tiles', () => {
 		await expect(m.body).toHaveText('12 live, 1 failed, 0 loading, 0 disabled.');
 		await expect(m.extra.locator('svg rect')).toHaveCount(15); // shell + manifest + 13 tiles
 		await expect(m.extra.locator('svg path')).toHaveCount(13); // manifest -> each tile
-		await expect(m.extra).toContainText('Manifest /api/manifest: live');
+		await expect(m.extra).toContainText(`Manifest ${MANIFEST_ATTR}: live`);
 		await expect(m.extra).toContainText('Broken demo failed: deliberate failure in mount()');
 		await expect(m.extra.locator('svg text', { hasText: /^live · \d+ ms$/ })).toHaveCount(12);
 		await expect(m.extra.locator('svg text', { hasText: /^failed$/ })).toHaveCount(1);
 	});
 
-	test('Deployed apps: build info matches /api/manifest, and every tile is listed with its status', async ({ page, request }) => {
-		const { build } = await (await request.get('/api/manifest')).json();
+	test('Deployed apps: build info matches the manifest, and every tile is listed with its status', async ({ page, request }) => {
+		const { build } = await (await request.get(MANIFEST_REL)).json();
 		expect(build.app).toBe('jellyfish-newapp');
 		if (process.env.E2E_EXPECTED_SHA) {
 			expect(build.gitSha).toBe(process.env.E2E_EXPECTED_SHA);
@@ -200,7 +201,7 @@ test.describe('diagnostics tiles', () => {
 		await expect(rows).toHaveCount(TOTAL + 1); // header + one per tile
 		for (const { id, title } of TILES) {
 			const row = rows.filter({ hasText: title });
-			await expect(row).toContainText(`/tiles/${id}/v1/index.js`);
+			await expect(row).toContainText(moduleUrl(id));
 			await expect(row).toContainText(id === 'broken' ? 'failed' : 'live');
 		}
 	});

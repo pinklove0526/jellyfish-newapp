@@ -157,7 +157,10 @@ async function loadTile(tile, frame, entry) {
     let timer;
 
     const work = (async () => {
-        mod = await import(tile.moduleUrl);
+        // import() resolves a relative specifier against this file, not the page, so
+        // resolve against the page first. Under Spring the manifest paths are absolute
+        // and this changes nothing; the static snapshot's are relative to the site.
+        mod = await import(new URL(tile.moduleUrl, document.baseURI).href);
         if (timedOut) {
             return;
         }
