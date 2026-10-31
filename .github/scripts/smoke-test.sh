@@ -1,12 +1,13 @@
 #!/usr/bin/env bash
-# Post-deploy smoke test. Polls $BASE_URL/api/manifest until it answers HTTP 200
+# Post-deploy smoke test. Polls $BASE_URL/api/manifest (or $SMOKE_MANIFEST_PATH) until it answers HTTP 200
 # with build.gitSha equal to $EXPECTED_SHA, and fails if that has not happened
 # before the deadline. Retrying with backoff covers the container's cold start
 # and the moment after a deploy when the previous container is still being
 # replaced; a SHA that is still different at the deadline is a failed deploy.
 #
 # Required: BASE_URL (https), EXPECTED_SHA
-# Optional: SMOKE_DEADLINE_SECONDS (600), SMOKE_INITIAL_BACKOFF_SECONDS (5),
+# Optional: SMOKE_MANIFEST_PATH (/api/manifest; the Pages site uses /manifest.json),
+#           SMOKE_DEADLINE_SECONDS (600), SMOKE_INITIAL_BACKOFF_SECONDS (5),
 #           SMOKE_MAX_BACKOFF_SECONDS (30), SMOKE_REQUEST_TIMEOUT_SECONDS (180)
 set -u
 
@@ -24,7 +25,9 @@ case "$base" in
   *) echo "::error::BASE_URL must be an https:// URL, got: $base"; exit 2 ;;
 esac
 
-url="$base/api/manifest"
+manifest_path="/${SMOKE_MANIFEST_PATH:-/api/manifest}"
+manifest_path="/${manifest_path#/}"
+url="$base$manifest_path"
 body="$(mktemp)"
 trap 'rm -f "$body"' EXIT
 
@@ -34,7 +37,7 @@ delay="$initial_backoff"
 reason=""
 while :; do
   attempt=$((attempt + 1))
-  code="$(curl -sS -o "$body" -w '%{http_code}' --max-time "$request_timeout" "$url" 2>/dev/null)" || code=000
+  code="$(curl -sS -H 'Cache-Control: no-cache' -o "$body" -w '%{http_code}' --max-time "$request_timeout" "$url" 2>/dev/null)" || code=000
 
   if [ "$code" = "200" ]; then
     sha="$(jq -r '.build.gitSha // empty' "$body" 2>/dev/null || true)"

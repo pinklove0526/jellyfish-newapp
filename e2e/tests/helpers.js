@@ -30,7 +30,7 @@ export async function settled(page, total = TOTAL) {
 }
 
 export async function openShell(page) {
-	await page.goto('/');
+	await page.goto('./');
 	await settled(page);
 }
 

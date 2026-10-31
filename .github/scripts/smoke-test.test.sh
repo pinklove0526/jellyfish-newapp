@@ -17,7 +17,7 @@ steps = [s.split(":", 1) for s in sys.argv[2].split(",")]
 state = {"i": 0}
 class H(http.server.BaseHTTPRequestHandler):
     def do_GET(self):
-        if self.path != "/api/manifest":  # readiness probes must not use up scripted answers
+        if self.path != sys.argv[3]:  # readiness probes must not use up scripted answers
             self.send_response(404); self.send_header("Content-Length", "0"); self.end_headers(); return
         status, sha = steps[min(state["i"], len(steps) - 1)]
         state["i"] += 1
@@ -33,7 +33,7 @@ run() { # name expected_exit expected_text steps [env...]
   local name="$1" want="$2" text="$3" steps="$4"; shift 4
   local port=$((20000 + RANDOM % 20000))
   if [ "$steps" != "NOSERVER" ]; then
-    python3 "$work/stub.py" "$port" "$steps" & server_pid=$!
+    python3 "$work/stub.py" "$port" "$steps" "${STUB_PATH:-/api/manifest}" & server_pid=$!
     for _ in $(seq 1 50); do curl -s -o /dev/null "http://127.0.0.1:$port/" && break; sleep 0.1; done
   fi
   out="$(env BASE_URL="http://127.0.0.1:$port" EXPECTED_SHA="$sha" SMOKE_DEADLINE_SECONDS=4 \
@@ -50,6 +50,8 @@ run "stale SHA that never changes fails"                   1 "expected '$sha'"  
 run "persistent 503 fails"                                 1 "HTTP 503"                  "503:-"
 run "200 without build info fails"                         1 "build.gitSha is '<missing>'" "200:-"
 run "nothing listening fails"                              1 "no HTTP response"          "NOSERVER"
+STUB_PATH=/manifest.json run "Pages: custom manifest path (SMOKE_MANIFEST_PATH)"  0 "/manifest.json answered 200" "404:-,200:$sha" SMOKE_MANIFEST_PATH=/manifest.json
+STUB_PATH=/manifest.json run "Pages: default path is not served there, so it fails" 1 "HTTP 404" "200:$sha"
 run "non-https URL is refused"                             2 "must be an https:// URL"   "200:$sha" BASE_URL=http://example.com
 
 [ "$failures" = 0 ] && echo "all smoke-test self-tests passed" || { echo "$failures self-test(s) failed"; exit 1; }
